@@ -1,167 +1,112 @@
-﻿//namespace Day_06
-//{
-//    public class Day06Part2
-//    {
-//        public static string Solve()
-//        {
-//            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "puzzleInput.txt");
-
-//            List<string> lines = new();
-//            using (StreamReader reader = new(filePath))
-//            {
-//                string? line;
-//                while ((line = reader.ReadLine()) != null)
-//                {
-//                    lines.Add(line);
-//                }
-//            }
-
-//            int height = lines.Count;
-//            int width = lines[0].Length;
-//            char[,] grid = new char[width, height];
-
-//            Point startingPoint = null;
-
-//            for (int y = 0; y < height; y++)
-//            {
-//                for (int x = 0; x < width; x++)
-//                {
-//                    grid[x, y] = lines[y][x];
-//                    if (grid[x, y] == '^')
-//                    {
-//                        startingPoint = new Point(x, y);
-//                    }
-//                }
-//            }
-
-//            if (startingPoint == null)
-//            {
-//                Console.WriteLine("Starting point not found.");
-//                return "";
-//            }
-
-//            var potentialObstructions = GetPotentionalObstructionPositions(grid, width, height, startingPoint);
-
-           
+﻿namespace Day_06
+{
+    public class Day06Part2
+    {
+        public static string Solve()
+        {
+            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "puzzleInput.txt");
+            string[] gridInput = File.ReadAllLines(filePath);
+                       
+            var (grid, start) = ParseGrid(gridInput);
             
-//            int obstructionCount = 0;
-
-//            foreach (var potentialObstruction in potentialObstructions.Where(p => p != startingPoint))
-//            {
-                
-//                if (CanGuardCircle(startingPoint, potentialObstruction, width, height, grid))
-//                {
-//                    obstructionCount++;
-//                    //Console.WriteLine("X: " + potentialObstruction.X + " Y: " + potentialObstruction.Y);
-//                    //Console.WriteLine($"Platné obstrukce: {obstructionCount}");
-//                }
-//            }
-
-//            return obstructionCount.ToString();
-//        }
-
-//        private static HashSet<Point> GetPotentionalObstructionPositions(char[,] grid, int width, int height, Point start)
-//        {
-//            HashSet<Point> visited = new();
-//            var currentDirection = new Point(0, -1);
-//            var currentPoint = start;
-
-//            while (true)
-//            {
-//                visited.Add(currentPoint);
-//                var nextPosition = new Point(
-//                    currentPoint.X + currentDirection.X,
-//                    currentPoint.Y + currentDirection.Y
-//                );
-
-//                if (IsOutOfBounds(nextPosition, width, height))
-//                {
-//                    break;
-//                }
-
-//                if (grid[nextPosition.X, nextPosition.Y] == '#')
-//                {
-//                    // Turn right
-//                    currentDirection = new Point(-currentDirection.Y, currentDirection.X);
-//                    nextPosition = new Point(
-//                        currentPoint.X + currentDirection.X,
-//                        currentPoint.Y + currentDirection.Y
-//                    );
-//                }
-
-//                if (IsOutOfBounds(nextPosition, width, height))
-//                {
-//                    break;
-//                }
-
-//                currentPoint = nextPosition;
-//            }
-
             
-//            return visited;
-//        }
+            if (start != (-1, -1, ' '))
+            {
+                int result = CountObstructionPositions(grid, start);
+                Console.WriteLine($"Number of valid obstruction positions: {result}");
+            }
+            else
+            {
+                Console.WriteLine("Guard's starting position not found.");
+            }
+            return "0";
 
-//        private static bool CanGuardCircle(Point startingPoint, Point newObstruction, int width, int height, char[,] grid)
-//        {
-//            HashSet<(Point point, Point direction)> visited = new();
-//            var currentDirection = new Point(0, -1); 
-//            var currentPoint = startingPoint;
-                        
-//            while (true)
-//            {
+        }
 
-//                if (visited.Contains((currentPoint, currentDirection)))
-//                {                    
-//                    return true;
-//                }
+        static (char[][] grid, (int, int, char) start) ParseGrid(string[] gridInput)
+        {
+            char[][] grid = new char[gridInput.Length][];
+            (int, int, char) start = (-1, -1, ' ');
 
-//                visited.Add((currentPoint, currentDirection)); 
+            for (int r = 0; r < gridInput.Length; r++)
+            {
+                grid[r] = gridInput[r].ToCharArray();
+                for (int c = 0; c < grid[r].Length; c++)
+                {
+                    if ("^v<>".Contains(grid[r][c]))
+                    {
+                        start = (r, c, grid[r][c]);
+                    }
+                }
+            }
+            return (grid, start);
+        }
 
-//                var nextPosition = new Point(
-//                    currentPoint.X + currentDirection.X,
-//                    currentPoint.Y + currentDirection.Y
-//                );
+        static bool MoveGuard(char[][] grid, (int, int, char) start)
+        {
+            var directions = new Dictionary<char, (int, int)> {
+            {'^', (-1, 0)},
+            {'v', (1, 0)},
+            {'<', (0, -1)},
+            {'>', (0, 1)}
+        };
 
-//                if (IsOutOfBounds(nextPosition, width, height))
-//                {
-//                    break; // Když dojdeme mimo mapu, ukončíme
-//                }
+            int rows = grid.Length;
+            int cols = grid[0].Length;
+            var visited = new HashSet<(int, int)>();
+            var queue = new Queue<(int, int, char)>();
+            queue.Enqueue(start);
 
-//                if (grid[nextPosition.X, nextPosition.Y] == '#' || 
-//                    (nextPosition.X == newObstruction.X && nextPosition.Y == newObstruction.Y))
-//                {
-//                    // Pokud narazíme na překážku, otočíme se doprava
-//                    currentDirection = new Point(-currentDirection.Y, currentDirection.X); // Otočení doprava               
+            while (queue.Count > 0)
+            {
+                var (r, c, direction) = queue.Dequeue();
 
-//                    nextPosition = new Point(
-//                        currentPoint.X + currentDirection.X,
-//                        currentPoint.Y + currentDirection.Y
-//                    );
+                // If we've visited this cell before, loop detected
+                if (visited.Contains((r, c)))
+                    return true;
+                visited.Add((r, c));
 
-//                    if (IsOutOfBounds(nextPosition, width, height))
-//                    {
-//                        break; // Pokud se po otočení dostaneme mimo mapu, skončíme
-//                    }
+                // Move in the current direction
+                var (dr, dc) = directions[direction];
+                int nr = r + dr, nc = c + dc;
 
-//                    if (grid[nextPosition.X, nextPosition.Y] == '#' ||
-//                        (nextPosition.X == newObstruction.X && nextPosition.Y == newObstruction.Y))
-//                    {
-//                        break;
-//                    }
-//                }                
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] != '#')
+                {
+                    char nextCell = grid[nr][nc];
+                    if ("^v<>".Contains(nextCell))
+                    {
+                        queue.Enqueue((nr, nc, nextCell)); // Change direction
+                    }
+                    else if (nextCell == '.')
+                    {
+                        queue.Enqueue((nr, nc, direction)); // Continue in the same direction
+                    }
+                }
+            }
+            Console.WriteLine("false");
+            return false;
+        }
 
-//                    // Pokračujeme v pohybu na novou pozici
-//                    currentPoint = nextPosition;
-//            }
+        static int CountObstructionPositions(char[][] grid, (int, int, char) start)
+        {
+            int rows = grid.Length;
+            int cols = grid[0].Length;
+            int count = 0;
 
-//            return false; // Pokud nenajdeme cyklus, vracíme false
-//        }
-
-//        private static bool IsOutOfBounds(Point position, int width, int height)
-//        {
-//            return position.X < 0 || position.Y < 0 || position.X >= width || position.Y >= height;
-//        }        
-
-//        public record Point(int X, int Y);
-//    }
-//}
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (grid[r][c] == '.') // Empty position
+                    {
+                        grid[r][c] = '#'; // Place obstruction
+                        if (MoveGuard(grid, start))
+                            count++;
+                        grid[r][c] = '.'; // Remove obstruction
+                    }
+                }
+            }
+            return count;
+        }
+    }
+}
