@@ -16,28 +16,19 @@
         }
 
         private static char[,] LoadAntennas(string filePath, out int width, out int height) 
-        {   
+        {
 
-            List<string> lines = new();
-            using (StreamReader reader = new(filePath))
-            {
-                string? line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    lines.Add(line);
-                }
-            }
-
-            height = lines.Count;
+            var lines = File.ReadAllLines(filePath);
+            height = lines.Length;
             width = lines[0].Length;
-            char[,] grid = new char[width, height];
-                       
+
+            var grid = new char[width, height];
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    grid[x, y] = lines[y][x];                    
+                    grid[x, y] = lines[y][x];
                 }
             }
 
